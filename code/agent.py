@@ -1,49 +1,47 @@
 from os import environ
-from pprint import pprint
 
-from llama_stack_client import Agent, LlamaStackClient
+from llama_stack_client import LlamaStackClient
 from llama_stack_client.lib.agents.react.agent import ReActAgent
 from llama_stack_client.lib.agents.react.tool_parser import ReActOutput
-from llama_stack_client.lib.agents.event_logger import EventLogger
-from termcolor import cprint
+
 
 from utils import step_printer
 
 
 llama_stack_url = environ.get(
-    'LLAMA_STACK_URL',
-    "http://llamastack-with-config-service.llama-stack.svc.cluster.local:8321"
+    "LLAMA_STACK_URL",
+    "http://llamastack-with-config-service.llama-stack.svc.cluster.local:8321",
 )
-model_id = environ.get('MODEL_ID', "granite-31-2b-instruct")
+model_id = environ.get("MODEL_ID", "granite-31-2b-instruct")
 model_prompt = """
 You are a helpful assistant. You have access to a number of tools.
 Whenever a tool is called, be sure to return the Response in a friendly and helpful tone.
 """
-temperature = float(environ.get('TEMPERATURE', '0.0'))
+temperature = float(environ.get("TEMPERATURE", "0.0"))
 strategy = {"type": "greedy"}
-max_tokens = int(environ.get('MAX_TOKENS', '512'))
-client_timeout = float(environ.get('CLIENT_TIMEOUT', '600.0'))
-max_infer_iterations = int(environ.get('MAX_INFER_ITERATIONS', '10'))
+max_tokens = int(environ.get("MAX_TOKENS", "512"))
+client_timeout = float(environ.get("CLIENT_TIMEOUT", "600.0"))
+max_infer_iterations = int(environ.get("MAX_INFER_ITERATIONS", "10"))
 
 print(
-    f'Inference Parameters:\n\tModel: {model_id}\n'
-    f'Llama Stack URL: {llama_stack_url}\n'
-    f'Client timeout: {client_timeout}\n'
-    f'Max infer iterations: {max_infer_iterations}\n'
-    f'Temperature: {temperature}'
+    f"Inference Parameters:\n\tModel: {model_id}\n"
+    f"Llama Stack URL: {llama_stack_url}\n"
+    f"Client timeout: {client_timeout}\n"
+    f"Max infer iterations: {max_infer_iterations}\n"
+    f"Temperature: {temperature}"
 )
 
 
 client = LlamaStackClient(
     base_url=llama_stack_url,
-    timeout=client_timeout # Default is 1 min which is far too little for some agentic tests, we set it to 10 min
+    timeout=client_timeout,  # Default is 1 min which is far too little for some agentic tests, we set it to 10 min
 )
 models = client.models.list()
-print(f'registered models: {models}')
+print(f"registered models: {models}")
 
 registered_tools = client.tools.list()
 registered_toolgroups = [t.toolgroup_id for t in registered_tools]
-print(f'registered toolgroups: {registered_toolgroups}')
+print(f"registered toolgroups: {registered_toolgroups}")
 
 agent = ReActAgent(
     client=client,
@@ -53,17 +51,17 @@ agent = ReActAgent(
         "type": "json_schema",
         "json_schema": ReActOutput.model_json_schema(),
     },
-    sampling_params={"max_tokens":max_tokens},
-    max_infer_iters=max_infer_iterations
+    sampling_params={"max_tokens": max_tokens},
+    max_infer_iters=max_infer_iterations,
 )
-print('instantiated ReAct agent')
+print("instantiated ReAct agent")
 
 
 def run_agent(pod_name, namespace):
-    print(f'reporting failure on {pod_name} in {namespace}')
+    print(f"reporting failure on {pod_name} in {namespace}")
     # user_prompts = [
     #     f"Review the OpenShift logs for the pod '{pod_name}',in the '{namespace}' namespace. "
-    #     "If the logs indicate an error search for the solution, " 
+    #     "If the logs indicate an error search for the solution, "
     #     "create a summary message with the category and explanation of the error, "
     #     'create a Github issue using {"name":"create_issue","arguments":'
     #     '{"owner":"redhat-ai-services","repo":"etx-agentic-ai",'
@@ -72,7 +70,7 @@ def run_agent(pod_name, namespace):
     # Build prompt safely to avoid f-string formatting issues
     try:
         print(f"Building prompt for pod: {pod_name}, namespace: {namespace}")
-        
+
         # Use .format() to avoid f-string curly brace conflicts
         prompt_template = """You are an expert OpenShift administrator. Your task is to analyze pod logs, summarize the error, and generate a JSON object to create a GitHub issue for tracking. Follow the format in the examples below.
         
@@ -100,14 +98,16 @@ def run_agent(pod_name, namespace):
         ONLY tail the last 10 lines of the pod, no more.
         The JSON object formatted EXACTLY as outlined above.
         """
-        
+
         # Safely format the prompt with variables
-        formatted_prompt = prompt_template.format(pod_name=pod_name, namespace=namespace)
+        formatted_prompt = prompt_template.format(
+            pod_name=pod_name, namespace=namespace
+        )
         print("✅ Prompt built successfully")
         print(f"Prompt length: {len(formatted_prompt)} characters")
-        
+
         user_prompts = [formatted_prompt]
-        
+
     except Exception as e:
         print(f"❌ Error building prompt: {e}")
         print(f"Error type: {type(e).__name__}")
@@ -125,14 +125,14 @@ def run_agent(pod_name, namespace):
         print("Creating agent session...")
         session_id = agent.create_session("agent-session")
         print(f"✅ Session created: {session_id}")
-        
+
         for i, prompt in enumerate(user_prompts, 1):
             try:
                 print(f"\n{'='*50}")
                 print(f"Processing prompt {i}/{len(user_prompts)}")
                 print(f"Prompt preview (first 200 chars): {prompt[:200]}...")
-                print('='*50)
-                
+                print("=" * 50)
+
                 print("Sending prompt to agent...")
                 response = agent.create_turn(
                     messages=[
@@ -142,17 +142,17 @@ def run_agent(pod_name, namespace):
                         }
                     ],
                     session_id=session_id,
-                    stream=False
+                    stream=False,
                 )
                 print("✅ Agent response received")
                 step_printer(response.steps)
-                
+
             except Exception as prompt_error:
                 print(f"❌ Error processing prompt {i}: {prompt_error}")
                 print(f"Error type: {type(prompt_error).__name__}")
                 print("Continuing with next prompt if available...")
                 continue
-                
+
     except Exception as session_error:
         print(f"❌ Critical error in session handling: {session_error}")
         print(f"Error type: {type(session_error).__name__}")

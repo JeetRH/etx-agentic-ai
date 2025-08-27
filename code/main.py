@@ -13,21 +13,18 @@ class PipelineFailure(BaseModel):
     namespace: str
 
 
-@app.get('/health')
+@app.get("/health")
 async def health():
-    print('receive health request')
-    return 'ok'
+    print("receive health request")
+    return "ok"
 
 
 @app.post("/report-failure")
 async def report_failure(pipeline_failure: PipelineFailure):
-    print(f'received report-failure request with payload: '
-          f'{pipeline_failure}')
+    print(f"received report-failure request with payload: " f"{pipeline_failure}")
     try:
-        run_agent(
-            pipeline_failure.pod_name, pipeline_failure.namespace
-        )
+        run_agent(pipeline_failure.pod_name, pipeline_failure.namespace)
     except Exception as e:
-        print(f'encountered error: {e}')
-    print('responding to client')
+        print(f"encountered error: {e}")
+    print("responding to client")
     return pipeline_failure

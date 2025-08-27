@@ -8,14 +8,18 @@ import re
 from dotenv import load_dotenv
 from fastmcp import Client
 from fastmcp.client.logging import LogMessage
-from fastmcp.client.transports import SSETransport # deprecated now https://mcp-framework.com/docs/Transports/sse
+from fastmcp.client.transports import (
+    SSETransport,
+)  # deprecated now https://mcp-framework.com/docs/Transports/sse
 from fastmcp.client.transports import StreamableHttpTransport
 from llama_stack_client import LlamaStackClient
 
 from rich import print
 
 load_dotenv()
-LLAMA_STACK_URL = os.getenv("LLAMA_STACK_URL") # LLAMA_STACK_URL=http://localhost:8321, LLAMA_STACK_URL=http://llamastack-with-config-service.llama-stack.svc.cluster.local:8321
+LLAMA_STACK_URL = os.getenv(
+    "LLAMA_STACK_URL"
+)  # LLAMA_STACK_URL=http://localhost:8321, LLAMA_STACK_URL=http://llamastack-with-config-service.llama-stack.svc.cluster.local:8321
 
 
 root = logging.getLogger()
@@ -50,19 +54,22 @@ def lls_get_tools():
     tool_group = lls_client.toolgroups.list()
     mcp_tools = []
     for tool in tool_group:
-        #print(f">>> Tool: {tool.provider_id}")
-        if (tool.provider_id == "model-context-protocol"
-            or tool.provider_id == "tavily-search"):
-            #or tool.provider_id == "rag-runtime"):
-            mcp_tools.append(tool) 
+        # print(f">>> Tool: {tool.provider_id}")
+        if (
+            tool.provider_id == "model-context-protocol"
+            or tool.provider_id == "tavily-search"
+        ):
+            # or tool.provider_id == "rag-runtime"):
+            mcp_tools.append(tool)
 
     tool_list = {}
     for tool in mcp_tools:
-        if (tool.provider_id == "model-context-protocol"):
+        if tool.provider_id == "model-context-protocol":
             tool_list[tool.identifier] = tool.mcp_endpoint.uri
-        elif (tool.provider_id == "tavily-search"):
-            tool_list[tool.identifier] = 'websearch'
+        elif tool.provider_id == "tavily-search":
+            tool_list[tool.identifier] = "websearch"
     return tool_list
+
 
 async def builtin_websearch(query: str):
     lls_client = LlamaStackClient(base_url=LLAMA_STACK_URL)
@@ -72,12 +79,13 @@ async def builtin_websearch(query: str):
     print(response.json())
     return response
 
+
 async def convert_tools_dspy() -> list[dspy.adapters.types.tool.Tool]:
     tools_list = lls_get_tools()
     dspy_tools = []
 
     for tool in tools_list:
-        if tools_list[tool] == 'websearch':
+        if tools_list[tool] == "websearch":
             dspy_tools.append(dspy.Tool(builtin_websearch))
             continue
 
@@ -106,8 +114,8 @@ async def dspy_mcp(user_request: str):
     dspy_tools = await convert_tools_dspy()
     print(dspy_tools)
     react = dspy.ReAct(CustomerAssistantService, tools=dspy_tools)
-    result = await react.acall(user_request=user_request)
-    #print(result)
+    result = await react.acall(user_request=user_request)  # noqa F841
+    # print(result)
     dspy.inspect_history(n=50)
 
 
@@ -116,7 +124,7 @@ def lls_get_inference_server():
     model_list = lls_client.models.list()
     print(model_list)
     llm = dspy.LM(
-        "openai/" + model_list[2].identifier, # hack for llama-4-scout-17b-16e-w4a16
+        "openai/" + model_list[2].identifier,  # hack for llama-4-scout-17b-16e-w4a16
         api_base=LLAMA_STACK_URL + "/v1/openai/v1",
         model_type="chat",
     )
