@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 from agent import run_agent
 
-print("Starting v0.0.2")
+print("Starting v0.0.3")
 
 app = FastAPI()
 

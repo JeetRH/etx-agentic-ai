@@ -74,7 +74,7 @@ def run_agent(pod_name, namespace):
         print(f"Building prompt for pod: {pod_name}, namespace: {namespace}")
 
         # Use .format() to avoid f-string curly brace conflicts
-        prompt_template = f"""You are an expert OpenShift administrator. Your task is to analyze pod logs, summarize the error, and generate a JSON object to create a GitHub issue for tracking. Follow the format in the examples below.
+        prompt_template = """You are an expert OpenShift administrator. Your task is to analyze pod logs, summarize the error, and generate a JSON object to create a GitHub issue for tracking. Follow the format in the examples below.
         
         ---
         EXAMPLE 1:
