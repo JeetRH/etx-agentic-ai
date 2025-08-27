@@ -1,3 +1,5 @@
+import traceback
+
 from os import environ
 
 from llama_stack_client import LlamaStackClient
@@ -111,6 +113,7 @@ def run_agent(pod_name, namespace):
     except Exception as e:
         print(f"❌ Error building prompt: {e}")
         print(f"Error type: {type(e).__name__}")
+        traceback.print_exc()
         # Fallback to simple prompt without examples
         fallback_prompt = (
             f"Review the OpenShift logs for the pod '{pod_name}' in the '{namespace}' namespace. "
