@@ -25,7 +25,7 @@ spec:
     spec:
       containers:
       - image: "image-registry.openshift-image-registry.svc:5000/ai-agent/ai-agent:latest"
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         name: agent-service
         ports:
         - containerPort: 8000
